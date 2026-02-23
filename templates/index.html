@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Data Analysis Report</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Reset & base                                                         */
+    /* ------------------------------------------------------------------ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f1a;
+      --surface:   #1a1a2e;
+      --surface2:  #16213e;
+      --border:    #2a2a4a;
+      --accent:    #7c3aed;
+      --accent2:   #06b6d4;
+      --positive:  #22c55e;
+      --negative:  #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --radius:    12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Layout                                                               */
+    /* ------------------------------------------------------------------ */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Header                                                               */
+    /* ------------------------------------------------------------------ */
+    header {
+      background: linear-gradient(135deg, #1a1a3e 0%, #0f0f1a 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 0 2rem;
+      text-align: center;
+    }
+
+    header .logo {
+      font-size: 2.6rem;
+      margin-bottom: .4rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p.subtitle {
+      color: var(--muted);
+      margin-top: .4rem;
+      font-size: .9rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Navigation                                                           */
+    /* ------------------------------------------------------------------ */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: .25rem;
+      padding: .5rem 1.5rem;
+      overflow-x: auto;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: .4rem .9rem;
+      border-radius: 6px;
+      font-size: .85rem;
+      white-space: nowrap;
+      transition: background .2s, color .2s;
+    }
+
+    nav a:hover { background: var(--surface2); color: var(--text); }
+    nav a.active { background: var(--accent); color: #fff; }
+
+    /* ------------------------------------------------------------------ */
+    /* Sections                                                             */
+    /* ------------------------------------------------------------------ */
+    section {
+      padding: 3rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-child { border-bottom: none; }
+
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin-left: .5rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Metric cards                                                         */
+    /* ------------------------------------------------------------------ */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      transition: transform .2s, border-color .2s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    .metric-label {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Info cards                                                           */
+    /* ------------------------------------------------------------------ */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .info-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+    }
+
+    .info-card .label {
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .info-card .value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-top: .2rem;
+      word-break: break-word;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Chart containers                                                     */
+    /* ------------------------------------------------------------------ */
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .chart-row { grid-template-columns: 1fr; }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Tables                                                               */
+    /* ------------------------------------------------------------------ */
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+    }
+
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+
+    table.report-table th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: .65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      text-transform: uppercase;
+      font-size: .75rem;
+      letter-spacing: .04em;
+    }
+
+    table.report-table td {
+      padding: .6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    table.report-table tr:last-child td { border-bottom: none; }
+
+    table.report-table tr:hover td {
+      background: rgba(124, 58, 237, 0.07);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Top contacts list                                                    */
+    /* ------------------------------------------------------------------ */
+    .contacts-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .contacts-list li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .65rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .contact-rank {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 1.4rem;
+    }
+
+    .contact-name { font-weight: 500; flex: 1; font-size: .9rem; }
+
+    .contact-count {
+      font-size: .8rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border-radius: 9999px;
+      padding: .15rem .6rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Privacy notice                                                       */
+    /* ------------------------------------------------------------------ */
+    .privacy-banner {
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: var(--radius);
+      padding: .8rem 1.2rem;
+      font-size: .85rem;
+      color: var(--accent2);
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Footer                                                               */
+    /* ------------------------------------------------------------------ */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: .8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ------------------------------------------------------------------ */
+    /* Utility                                                              */
+    /* ------------------------------------------------------------------ */
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 9999px;
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .03em;
+    }
+
+    .badge-accent  { background: rgba(124,58,237,.2);  color: #a78bfa; }
+    .badge-info    { background: rgba(6,182,212,.2);   color: #67e8f9; }
+    .badge-success { background: rgba(34,197,94,.2);   color: #86efac; }
+
+    .mt-1 { margin-top: .5rem; }
+    .mt-2 { margin-top: 1rem; }
+    .mb-2 { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+
+<!-- ======================================================================
+     HEADER
+     ====================================================================== -->
+<header>
+  <div class="logo">📊</div>
+  <h1>Telegram Data Analysis Report</h1>
+  <p class="subtitle">
+    Generated for <strong>{{ my_name }}</strong> &nbsp;·&nbsp;
+    {{ generated_at }}
+  </p>
+</header>
+
+<!-- ======================================================================
+     NAVIGATION
+     ====================================================================== -->
+<nav>
+  <a href="#overview"    class="active">Overview</a>
+  <a href="#messages">Messages</a>
+  <a href="#temporal">Temporal</a>
+  <a href="#graph">Social Graph</a>
+  <a href="#lost">Lost Connections</a>
+  {% if figures.get('sentiment_per_contact') %}
+  <a href="#sentiment">Sentiment</a>
+  {% endif %}
+</nav>
+
+<div class="container">
+
+  <!-- Privacy notice -->
+  <div class="privacy-banner mt-2">
+    🔒 &nbsp;<strong>Privacy First:</strong> This report was generated entirely
+    on your local machine. No data was uploaded or shared with any server.
+  </div>
+
+  <!-- ====================================================================
+       OVERVIEW
+       ==================================================================== -->
+  <section id="overview">
+    <h2 class="section-title">📈 Overview</h2>
+
+    <!-- Key metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">{{ "{:,}".format(total_messages) }}</div>
+        <div class="metric-label">Total Messages</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ "{:,}".format(total_chats) }}</div>
+        <div class="metric-label">Total Chats</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ "{:,}".format(total_contacts) }}</div>
+        <div class="metric-label">Unique Contacts</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ avg_messages_per_day }}</div>
+        <div class="metric-label">Avg Messages / Day</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ "{:,}".format(total_words) }}</div>
+        <div class="metric-label">Total Words</div>
+      </div>
+    </div>
+
+    <!-- Info cards -->
+    <div class="info-grid mb-2">
+      <div class="info-card">
+        <div class="label">Date Range</div>
+        <div class="value">{{ date_range_start }} → {{ date_range_end }}</div>
+      </div>
+      <div class="info-card">
+        <div class="label">Most Active Chat</div>
+        <div class="value">{{ most_active_chat }}</div>
+      </div>
+      <div class="info-card">
+        <div class="label">Analysis Period</div>
+        <div class="value">{{ stats.get('days_span', 'N/A') }} days</div>
+      </div>
+    </div>
+
+    <!-- Timeline chart -->
+    {% if figures.get('timeline') %}
+    <div class="chart-container">
+      {{ figures['timeline'] | safe }}
+    </div>
+    {% endif %}
+
+    <!-- Top contacts + heatmap side by side -->
+    <div class="chart-row">
+      {% if figures.get('top_contacts') %}
+      <div class="chart-container">
+        {{ figures['top_contacts'] | safe }}
+      </div>
+      {% endif %}
+      {% if figures.get('heatmap') %}
+      <div class="chart-container">
+        {{ figures['heatmap'] | safe }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Top contacts list -->
+    {% if top_contacts_list %}
+    <h3 class="mt-2 mb-2" style="color:var(--muted);font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;">
+      Top 10 Contacts
+    </h3>
+    <ul class="contacts-list">
+      {% for contact in top_contacts_list %}
+      <li>
+        <span class="contact-rank">#{{ loop.index }}</span>
+        <span class="contact-name">{{ contact.name }}</span>
+        <span class="contact-count">{{ "{:,}".format(contact.count) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+  </section>
+
+  <!-- ====================================================================
+       MESSAGES
+       ==================================================================== -->
+  <section id="messages">
+    <h2 class="section-title">💬 Message Statistics</h2>
+
+    {% if tables.get('top_contacts') %}
+    <h3 style="margin-bottom:.75rem;font-size:1rem;">Top Contacts by Message Count</h3>
+    <div class="table-wrap">
+      {{ tables['top_contacts'] | safe }}
+    </div>
+    {% endif %}
+
+    {% if figures.get('monthly') %}
+    <div class="chart-container">
+      {{ figures['monthly'] | safe }}
+    </div>
+    {% endif %}
+
+    <div class="chart-row">
+      {% if figures.get('initiators') %}
+      <div class="chart-container">
+        {{ figures['initiators'] | safe }}
+      </div>
+      {% endif %}
+      {% if figures.get('avg_length') %}
+      <div class="chart-container">
+        {{ figures['avg_length'] | safe }}
+      </div>
+      {% endif %}
+    </div>
+
+  </section>
+
+  <!-- ====================================================================
+       TEMPORAL
+       ==================================================================== -->
+  <section id="temporal">
+    <h2 class="section-title">⏱ Temporal Analysis</h2>
+
+    {% if figures.get('temporal') %}
+    <div class="chart-container">
+      {{ figures['temporal'] | safe }}
+    </div>
+    {% endif %}
+
+    <div class="chart-row">
+      {% if figures.get('weekday') %}
+      <div class="chart-container">
+        {{ figures['weekday'] | safe }}
+      </div>
+      {% endif %}
+      {% if figures.get('hourly') %}
+      <div class="chart-container">
+        {{ figures['hourly'] | safe }}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if figures.get('bursts') %}
+    <div class="chart-container">
+      {{ figures['bursts'] | safe }}
+    </div>
+    {% endif %}
+
+  </section>
+
+  <!-- ====================================================================
+       SOCIAL GRAPH
+       ==================================================================== -->
+  <section id="graph">
+    <h2 class="section-title">🕸 Social Graph</h2>
+
+    {% if figures.get('social_graph') %}
+    <div class="chart-container">
+      {{ figures['social_graph'] | safe }}
+    </div>
+    {% endif %}
+
+    {% if tables.get('graph_metrics') %}
+    <h3 style="margin-bottom:.75rem;font-size:1rem;">Graph Metrics (Centrality)</h3>
+    <div class="table-wrap">
+      {{ tables['graph_metrics'] | safe }}
+    </div>
+    {% endif %}
+
+  </section>
+
+  <!-- ====================================================================
+       LOST CONNECTIONS
+       ==================================================================== -->
+  <section id="lost">
+    <h2 class="section-title">👻 Lost Connections</h2>
+
+    {% if figures.get('lost_connections') %}
+    <div class="chart-container">
+      {{ figures['lost_connections'] | safe }}
+    </div>
+    {% endif %}
+
+    {% if tables.get('lost_connections') %}
+    <h3 style="margin-bottom:.75rem;font-size:1rem;">Lost Connections Details</h3>
+    <div class="table-wrap">
+      {{ tables['lost_connections'] | safe }}
+    </div>
+    {% endif %}
+
+    {% if tables.get('deleted_accounts') %}
+    <h3 style="margin:.75rem 0;font-size:1rem;">Deleted Accounts Detected</h3>
+    <div class="table-wrap">
+      {{ tables['deleted_accounts'] | safe }}
+    </div>
+    {% endif %}
+
+  </section>
+
+  <!-- ====================================================================
+       SENTIMENT  (optional – only shown when data present)
+       ==================================================================== -->
+  {% if figures.get('sentiment_per_contact') or figures.get('sentiment_timeline') %}
+  <section id="sentiment">
+    <h2 class="section-title">😊 Sentiment Analysis</h2>
+
+    <div class="chart-row">
+      {% if figures.get('sentiment_distribution') %}
+      <div class="chart-container">
+        {{ figures['sentiment_distribution'] | safe }}
+      </div>
+      {% endif %}
+      {% if figures.get('sentiment_per_contact') %}
+      <div class="chart-container">
+        {{ figures['sentiment_per_contact'] | safe }}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if figures.get('sentiment_timeline') %}
+    <div class="chart-container">
+      {{ figures['sentiment_timeline'] | safe }}
+    </div>
+    {% endif %}
+
+  </section>
+  {% endif %}
+
+</div><!-- /.container -->
+
+<!-- ======================================================================
+     FOOTER
+     ====================================================================== -->
+<footer>
+  <p>
+    Generated by
+    <strong>Telegram Data Analyzer</strong> &nbsp;·&nbsp;
+    {{ generated_at }} &nbsp;·&nbsp;
+    Data processed <em>100% locally</em> — nothing left your device.
+  </p>
+</footer>
+
+<script>
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll("section[id]");
+  const navLinks = document.querySelectorAll("nav a");
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          navLinks.forEach((a) => a.classList.remove("active"));
+          const active = document.querySelector(
+            `nav a[href="#${entry.target.id}"]`
+          );
+          if (active) active.classList.add("active");
+        }
+      });
+    },
+    { rootMargin: "-40% 0px -55% 0px" }
+  );
+
+  sections.forEach((s) => observer.observe(s));
+</script>
+
+</body>
+</html>
