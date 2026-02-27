@@ -117,10 +117,13 @@ def _parse_chat_block(chat: dict) -> list[dict]:
 
 def _load_result_json(export_path: str) -> list[dict]:
     """
-    Load all messages from the unified ``result.json`` file.
+    Load all messages from the ``result.json`` file in *export_path*.
 
-    The file lives at the root of the export directory and contains every
-    chat under ``chats.list`` (and optionally ``left_chats.list``).
+    Handles two layouts produced by Telegram Desktop:
+
+    * **Full export** – ``{chats: {list: [...]}, left_chats: {list: [...]}}``
+    * **Single-chat export** – ``{name: "...", type: "...", messages: [...]}``
+      (the file is the chat object itself)
     """
     result_path = os.path.join(export_path, "result.json")
     if not os.path.exists(result_path):
@@ -132,6 +135,15 @@ def _load_result_json(export_path: str) -> list[dict]:
 
     all_rows: list[dict] = []
 
+    # ── Single-chat export: root object IS the chat ──────────────────────────
+    if "messages" in data and "chats" not in data:
+        rows = _parse_chat_block(data)
+        all_rows.extend(rows)
+        logger.info("result.json: single-chat format, parsed %d messages from '%s'",
+                    len(rows), data.get("name", "<unnamed>"))
+        return all_rows
+
+    # ── Full export: chats are nested under chats.list / left_chats.list ─────
     for section_key in ("chats", "left_chats"):
         section = data.get(section_key)
         if not section:
@@ -210,6 +222,9 @@ def load_telegram_export(export_path: str) -> pd.DataFrame:
     """
     # Strip accidental surrounding quotes (common copy-paste artifact)
     export_path = export_path.strip().strip('"').strip("'")
+    # If the user pasted a path to result.json itself, use its parent directory
+    if os.path.isfile(export_path):
+        export_path = os.path.dirname(export_path)
 
     if not os.path.isdir(export_path):
         raise FileNotFoundError(

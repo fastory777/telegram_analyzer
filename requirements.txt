@@ -1,11 +1,39 @@
+# Core UI & data
 streamlit>=1.28.0
 pandas>=2.0.0
+
+# Graph & charts
 networkx>=3.1
 plotly>=5.15.0
 matplotlib>=3.7.0
+
+# Sentiment analysis
 vaderSentiment>=3.3.2
+textblob>=0.17.1
+
+# Report generation
 jinja2>=3.1.2
+
+# Static image export (for graph PNG)
+kaleido>=0.2.1
+
+# Numerics
 scipy>=1.11.0
 numpy>=1.24.0
-textblob>=0.17.1
-kaleido>=0.2.1
+
+# ---------------------------------------------------------------------------
+# Optional — install for enhanced features
+# ---------------------------------------------------------------------------
+
+# Better stopword lists for Word Statistics / Pattern Analysis / Advanced Search
+# After installing, run: python -c "import nltk; nltk.download('stopwords')"
+nltk>=3.8
+
+# Word Cloud visualisation in the Word Statistics tab
+# pip install wordcloud
+wordcloud>=1.9.0
+
+# Russian lemmatization in Exact Word search and Word Statistics
+# Normalises inflected forms: "идёт", "шёл", "идти" → "идти"
+# pip install pymorphy2
+# pymorphy2>=0.9.1
